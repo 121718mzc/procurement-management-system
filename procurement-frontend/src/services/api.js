@@ -15,12 +15,19 @@ api.interceptors.request.use(
   config => {
     // 从localStorage获取token
     const token = localStorage.getItem('token');
+    console.log('Token from localStorage:', token);
     if (token) {
-      config.headers.Authorization = token;
+      // 添加Bearer前缀
+      config.headers.Authorization = `Bearer ${token}`;
+      console.log('Token added to request with Bearer prefix:', token);
+    } else {
+      console.log('No token in localStorage');
     }
+    console.log('Request config:', config);
     return config;
   },
   error => {
+    console.log('Request error:', error);
     return Promise.reject(error);
   }
 );

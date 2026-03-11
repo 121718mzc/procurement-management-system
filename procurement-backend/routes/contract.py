@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify, send_file
 from models.contract import Contract
 from models.contract_item import ContractItem
 from db import db
+from utils.auth import require_permission
 import io
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
@@ -12,6 +13,7 @@ bp = Blueprint('contract', __name__, url_prefix='/contract')
 
 # 合同列表
 @bp.route('/', methods=['GET'])
+@require_permission('contract:view')
 def get_contracts():
     try:
         # 获取分页参数
@@ -39,6 +41,7 @@ def get_contracts():
 
 # 添加合同
 @bp.route('/', methods=['POST'])
+@require_permission('contract:add')
 def add_contract():
     data = request.json
     try:
@@ -47,6 +50,7 @@ def add_contract():
             supplier_id=data['supplier_id'],
             contract_number=data['contract_number'],
             type=data['type_name'],  # 使用type_name作为type字段
+            type_code=data.get('type_code'),
             title=data['title'],
             content=data['content'],
             start_date=data['start_date'],
@@ -76,6 +80,7 @@ def add_contract():
 
 # 编辑合同
 @bp.route('/<int:id>', methods=['PUT'])
+@require_permission('contract:edit')
 def update_contract(id):
     data = request.json
     try:
@@ -87,6 +92,7 @@ def update_contract(id):
         contract.supplier_id = data.get('supplier_id', contract.supplier_id)
         contract.contract_number = data.get('contract_number', contract.contract_number)
         contract.type = data.get('type_name', contract.type)  # 使用type_name作为type字段
+        contract.type_code = data.get('type_code', contract.type_code)
         contract.title = data.get('title', contract.title)
         contract.content = data.get('content', contract.content)
         contract.start_date = data.get('start_date', contract.start_date)
@@ -116,6 +122,7 @@ def update_contract(id):
 
 # 删除合同
 @bp.route('/<int:id>', methods=['DELETE'])
+@require_permission('contract:delete')
 def delete_contract(id):
     try:
         # 删除合同物品
@@ -134,6 +141,7 @@ def delete_contract(id):
 
 # 导出合同PDF
 @bp.route('/<int:id>/export', methods=['GET'])
+@require_permission('contract:view')
 def export_contract(id):
     try:
         contract = Contract.query.get(id)

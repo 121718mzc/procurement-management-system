@@ -8,6 +8,7 @@ class Contract(db.Model):
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False)
     contract_number = db.Column(db.String(50), nullable=False, unique=True)
     type = db.Column(db.String(50), nullable=False)
+    type_code = db.Column(db.String(20))
     title = db.Column(db.String(200), nullable=False)
     content = db.Column(db.Text, nullable=False)
     start_date = db.Column(db.Date, nullable=False)
@@ -26,6 +27,7 @@ class Contract(db.Model):
             'supplier_name': self.supplier.name if hasattr(self, 'supplier') else None,
             'contract_number': self.contract_number,
             'type': self.type,
+            'type_code': self.type_code,
             'title': self.title,
             'content': self.content,
             'start_date': self.start_date.strftime('%Y-%m-%d') if self.start_date else None,

@@ -2,12 +2,14 @@
 from flask import Blueprint, request, jsonify
 from models.supplier import Supplier
 from db import db
+from utils.auth import require_permission
 
 # 创建蓝图
 bp = Blueprint('supplier', __name__, url_prefix='/supplier')
 
 # 供应商列表
 @bp.route('/', methods=['GET'])
+@require_permission('supplier:view')
 def get_suppliers():
     # 获取分页参数
     page = request.args.get('page', 1, type=int)
@@ -31,6 +33,7 @@ def get_suppliers():
 
 # 添加供应商
 @bp.route('/', methods=['POST'])
+@require_permission('supplier:add')
 def add_supplier():
     data = request.json
     try:
@@ -51,6 +54,7 @@ def add_supplier():
 
 # 编辑供应商
 @bp.route('/<int:id>', methods=['PUT'])
+@require_permission('supplier:edit')
 def update_supplier(id):
     data = request.json
     try:
@@ -73,6 +77,7 @@ def update_supplier(id):
 
 # 删除供应商
 @bp.route('/<int:id>', methods=['DELETE'])
+@require_permission('supplier:delete')
 def delete_supplier(id):
     try:
         supplier = Supplier.query.get(id)

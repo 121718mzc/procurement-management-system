@@ -12,15 +12,23 @@
           <el-input v-model="searchForm.contract_number" placeholder="请输入合同编号"></el-input>
         </el-form-item>
         <el-form-item label="供应商">
-          <el-select v-model="searchForm.supplier_id" placeholder="请选择供应商">
-            <el-option label="供应商A" value="1"></el-option>
-            <el-option label="供应商B" value="2"></el-option>
+          <el-select v-model="searchForm.supplier_id" placeholder="请选择供应商" clearable>
+            <el-option
+              v-for="supplier in suppliers"
+              :key="supplier.id"
+              :label="supplier.name"
+              :value="String(supplier.id)">
+            </el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="合同类型">
-          <el-select v-model="searchForm.type_id" placeholder="请选择合同类型">
-            <el-option label="NDA保密协议" value="1"></el-option>
-            <el-option label="多物品采购合同" value="2"></el-option>
+          <el-select v-model="searchForm.type_id" placeholder="请选择合同类型" clearable>
+            <el-option
+              v-for="type in contractTypes"
+              :key="type.id"
+              :label="type.name"
+              :value="String(type.id)">
+            </el-option>
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -79,14 +87,22 @@
         </el-form-item>
         <el-form-item label="合同类型" prop="type_id">
           <el-select v-model="contractForm.type_id" placeholder="请选择合同类型">
-            <el-option label="NDA保密协议" value="1"></el-option>
-            <el-option label="多物品采购合同" value="2"></el-option>
+            <el-option
+              v-for="type in contractTypes"
+              :key="type.id"
+              :label="type.name"
+              :value="String(type.id)">
+            </el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="供应商" prop="supplier_id">
           <el-select v-model="contractForm.supplier_id" placeholder="请选择供应商">
-            <el-option label="供应商A" value="1"></el-option>
-            <el-option label="供应商B" value="2"></el-option>
+            <el-option
+              v-for="supplier in suppliers"
+              :key="supplier.id"
+              :label="supplier.name"
+              :value="String(supplier.id)">
+            </el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="开始日期" prop="start_date">
@@ -120,13 +136,19 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { contractService } from '../services/contract'
+import { formatDate, toNumber, toString } from '../utils'
 
 export default {
   name: 'Contract',
   setup() {
     const contracts = ref([])
     const loading = ref(false)
-    
+    const suppliers = ref([])
+    const contractTypes = ref([
+      { id: 1, code: 'NDA', name: 'NDA保密协议' },
+      { id: 2, code: 'Purchase', name: '多物品采购合同' }
+    ])
+
     const searchForm = reactive({
       contract_number: '',
       supplier_id: '',
@@ -167,38 +189,44 @@ export default {
     }
     
     const contractFormRef = ref(null)
-    
+
+    // 获取基础数据（供应商列表）
+    const getBaseData = async () => {
+      try {
+        const suppliersRes = await contractService.getSuppliers()
+        suppliers.value = suppliersRes.data.data || suppliersRes.data || []
+      } catch (error) {
+        ElMessage.error('获取基础数据失败：' + (error.response?.data?.message || '未知错误'))
+      }
+    }
+
+    // 根据ID获取供应商名称
+    const getSupplierName = (supplierId) => {
+      const supplier = suppliers.value.find(s => s.id === supplierId)
+      return supplier ? supplier.name : '未知供应商'
+    }
+
+    // 根据类型代码获取合同类型名称
+    const getContractTypeName = (contractType) => {
+      const type = contractTypes.value.find(t => t.code === contractType)
+      return type ? type.name : '未知类型'
+    }
+
     // 获取合同列表
     const getContracts = async () => {
       loading.value = true
       try {
         const response = await contractService.getContracts(currentPage.value, pageSize.value)
-        // 模拟供应商和合同类型名称
-        const supplierMap = {
-          1: '供应商A',
-          2: '供应商B'
-        }
-        const typeMap = {
-          'NDA': 'NDA保密协议',
-          'Purchase': '多物品采购合同'
-        }
-        // 转换合同类型格式
         const transformedContracts = response.data.data.map(contract => {
-          // 转换合同类型
-          let type_id = 1
-          let type_name = 'NDA保密协议'
-          if (contract.contract_type === 'Purchase') {
-            type_id = 2
-            type_name = '多物品采购合同'
-          }
-          
+          const type = contractTypes.value.find(t => t.code === contract.type_code || t.name === contract.type)
           return {
             ...contract,
-            title: contract.title || contract.contract_number, // 使用合同标题，如果没有则使用合同编号
-            type_id: type_id,
-            type_name: type_name,
-            supplier_name: supplierMap[contract.supplier_id] || '未知供应商',
-            content: contract.content || '合同内容...' // 使用合同内容，如果没有则使用默认值
+            title: contract.title || contract.contract_number,
+            type_id: type ? type.id : '',
+            type_name: contract.type,
+            type_code: contract.type_code,
+            supplier_name: contract.supplier_name || getSupplierName(contract.supplier_id),
+            content: contract.content || '合同内容...'
           }
         })
         contracts.value = transformedContracts
@@ -211,8 +239,13 @@ export default {
     }
     
     // 初始化数据
-    onMounted(() => {
-      getContracts()
+    onMounted(async () => {
+      // 检查是否有token
+      const token = localStorage.getItem('token')
+      if (token) {
+        await getBaseData()
+        await getContracts()
+      }
     })
     
     const handleAdd = () => {
@@ -242,23 +275,16 @@ export default {
         if (valid) {
           loading.value = true
           try {
-            // 格式化日期为YYYY-MM-DD格式
-            const formatDate = (date) => {
-              if (!date) return date
-              const d = new Date(date)
-              return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-            }
+            // 日期格式化已在工具函数中实现
             
-            // 转换合同类型
-            let contract_type = 'NDA'
-            if (contractForm.type_id === '2') {
-              contract_type = 'Purchase'
-            }
+            // 根据type_id查找对应的合同类型
+            const selectedType = contractTypes.value.find(t => t.id === Number(contractForm.type_id))
             
             const formData = {
               supplier_id: Number(contractForm.supplier_id),
               contract_number: contractForm.contract_number,
-              contract_type: contract_type,
+              type_name: selectedType ? selectedType.name : 'NDA保密协议',
+              type_code: selectedType ? selectedType.code : 'NDA',
               start_date: formatDate(contractForm.start_date),
               end_date: formatDate(contractForm.end_date),
               status: contractForm.status,
@@ -318,54 +344,37 @@ export default {
       loading.value = true
       try {
         const response = await contractService.getContracts(currentPage.value, pageSize.value)
-        // 模拟供应商和合同类型名称
-        const supplierMap = {
-          1: '供应商A',
-          2: '供应商B'
-        }
-        const typeMap = {
-          'NDA': 'NDA保密协议',
-          'Purchase': '多物品采购合同'
-        }
-        // 转换合同类型格式
         let filteredContracts = response.data.data.map(contract => {
-          // 转换合同类型
-          let type_id = 1
-          let type_name = 'NDA保密协议'
-          if (contract.contract_type === 'Purchase') {
-            type_id = 2
-            type_name = '多物品采购合同'
-          }
-          
+          const type = contractTypes.value.find(t => t.name === contract.type)
           return {
             ...contract,
-            title: contract.title || contract.contract_number, // 使用合同标题，如果没有则使用合同编号
-            type_id: type_id,
-            type_name: type_name,
-            supplier_name: supplierMap[contract.supplier_id] || '未知供应商',
-            content: contract.content || '合同内容...' // 使用合同内容，如果没有则使用默认值
+            title: contract.title || contract.contract_number,
+            type_id: type ? type.id : '',
+            type_name: contract.type,
+            supplier_name: contract.supplier_name || getSupplierName(contract.supplier_id),
+            content: contract.content || '合同内容...'
           }
         })
-        
+
         // 根据搜索条件过滤
         if (searchForm.contract_number) {
-          filteredContracts = filteredContracts.filter(contract => 
+          filteredContracts = filteredContracts.filter(contract =>
             contract.contract_number.toLowerCase().includes(searchForm.contract_number.toLowerCase())
           )
         }
-        
+
         if (searchForm.supplier_id) {
-          filteredContracts = filteredContracts.filter(contract => 
+          filteredContracts = filteredContracts.filter(contract =>
             contract.supplier_id == Number(searchForm.supplier_id)
           )
         }
-        
+
         if (searchForm.type_id) {
-          filteredContracts = filteredContracts.filter(contract => 
+          filteredContracts = filteredContracts.filter(contract =>
             contract.type_id == Number(searchForm.type_id)
           )
         }
-        
+
         contracts.value = filteredContracts
         total.value = filteredContracts.length
       } catch (error) {
@@ -396,6 +405,8 @@ export default {
     return {
       contracts,
       loading,
+      suppliers,
+      contractTypes,
       searchForm,
       currentPage,
       pageSize,

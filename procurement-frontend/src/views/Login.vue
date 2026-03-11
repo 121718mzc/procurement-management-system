@@ -51,11 +51,23 @@ export default {
         if (valid) {
           loading.value = true
           try {
+            console.log('Login form:', loginForm)
             const response = await userService.login(loginForm)
-            ElMessage.success('登录成功')
-            localStorage.setItem('token', response.data.token)
-            router.push('/')
+            console.log('Login response:', response)
+            if (response.data && response.data.token) {
+              ElMessage.success('登录成功')
+              localStorage.setItem('token', response.data.token)
+              console.log('Token stored:', response.data.token)
+              // 立即检查token是否存储成功
+              const storedToken = localStorage.getItem('token')
+              console.log('Token in localStorage after storage:', storedToken)
+              router.push('/')
+            } else {
+              ElMessage.error('登录失败：未返回token')
+              console.error('No token in response:', response)
+            }
           } catch (error) {
+            console.log('Login error:', error)
             ElMessage.error('登录失败：' + (error.response?.data?.message || '未知错误'))
           } finally {
             loading.value = false

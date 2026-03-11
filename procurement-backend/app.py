@@ -32,6 +32,7 @@ from models.contract_item import ContractItem
 from models.purchase_order import PurchaseOrder
 from models.purchase_order_item import PurchaseOrderItem
 from models.user import User
+from models.role import Role, Permission, user_roles, role_permissions
 
 # 导入路由
 from routes.supplier import bp as supplier_bp
@@ -40,6 +41,7 @@ from routes.pricing import bp as pricing_bp
 from routes.contract import bp as contract_bp
 from routes.purchase import bp as purchase_bp
 from routes.user import bp as user_bp
+from routes.role import bp as role_bp
 
 # 注册蓝图
 app.register_blueprint(supplier_bp)
@@ -48,6 +50,7 @@ app.register_blueprint(pricing_bp)
 app.register_blueprint(contract_bp)
 app.register_blueprint(purchase_bp)
 app.register_blueprint(user_bp)
+app.register_blueprint(role_bp)
 
 # 初始化数据库
 try:

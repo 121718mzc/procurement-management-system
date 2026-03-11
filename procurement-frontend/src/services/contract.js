@@ -1,12 +1,10 @@
-import axios from 'axios'
-
-const API_BASE_URL = 'http://localhost:5000'
+import api from './api'
 
 export const contractService = {
   // 获取合同列表
   getContracts: async (page = 1, pageSize = 10) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/contract/`, {
+      const response = await api.get('/contract/', {
         params: { page, per_page: pageSize }
       })
       return response
@@ -18,7 +16,7 @@ export const contractService = {
   // 添加合同
   addContract: async (contractData) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/contract/`, contractData)
+      const response = await api.post('/contract/', contractData)
       return response
     } catch (error) {
       throw error
@@ -28,7 +26,7 @@ export const contractService = {
   // 更新合同
   updateContract: async (id, contractData) => {
     try {
-      const response = await axios.put(`${API_BASE_URL}/contract/${id}`, contractData)
+      const response = await api.put(`/contract/${id}`, contractData)
       return response
     } catch (error) {
       throw error
@@ -38,7 +36,7 @@ export const contractService = {
   // 删除合同
   deleteContract: async (id) => {
     try {
-      const response = await axios.delete(`${API_BASE_URL}/contract/${id}`)
+      const response = await api.delete(`/contract/${id}`)
       return response
     } catch (error) {
       throw error
@@ -48,9 +46,19 @@ export const contractService = {
   // 导出合同为PDF
   exportContract: async (id) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/contract/${id}/export`, {
+      const response = await api.get(`/contract/${id}/export`, {
         responseType: 'blob'
       })
+      return response
+    } catch (error) {
+      throw error
+    }
+  },
+
+  // 获取供应商列表
+  getSuppliers: async () => {
+    try {
+      const response = await api.get('/supplier/')
       return response
     } catch (error) {
       throw error

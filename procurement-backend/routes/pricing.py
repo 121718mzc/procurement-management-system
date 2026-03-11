@@ -1,13 +1,15 @@
-# 价格路由
+# 价格管理路由
 from flask import Blueprint, request, jsonify
 from models.pricing import Pricing
 from db import db
+from utils.auth import require_permission
 
 # 创建蓝图
 bp = Blueprint('pricing', __name__, url_prefix='/pricing')
 
 # 价格列表
 @bp.route('/', methods=['GET'])
+@require_permission('pricing:view')
 def get_pricings():
     try:
         # 获取分页参数
@@ -35,6 +37,7 @@ def get_pricings():
 
 # 添加价格
 @bp.route('/', methods=['POST'])
+@require_permission('pricing:add')
 def add_pricing():
     data = request.json
     try:
@@ -55,6 +58,7 @@ def add_pricing():
 
 # 编辑价格
 @bp.route('/<int:id>', methods=['PUT'])
+@require_permission('pricing:edit')
 def update_pricing(id):
     data = request.json
     try:
@@ -77,6 +81,7 @@ def update_pricing(id):
 
 # 删除价格
 @bp.route('/<int:id>', methods=['DELETE'])
+@require_permission('pricing:delete')
 def delete_pricing(id):
     try:
         pricing = Pricing.query.get(id)

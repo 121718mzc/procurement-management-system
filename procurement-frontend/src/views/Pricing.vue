@@ -10,15 +10,22 @@
       <el-form :inline="true" :model="searchForm" class="search-form">
         <el-form-item label="物料名称">
           <el-select v-model="searchForm.material_id" placeholder="请选择物料">
-            <el-option label="CPU" value="1"></el-option>
-            <el-option label="内存" value="2"></el-option>
-            <el-option label="硬盘" value="3"></el-option>
+            <el-option
+              v-for="material in materials"
+              :key="material.id"
+              :label="material.name"
+              :value="String(material.id)">
+            </el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="供应商">
           <el-select v-model="searchForm.supplier_id" placeholder="请选择供应商">
-            <el-option label="供应商A" value="1"></el-option>
-            <el-option label="供应商B" value="2"></el-option>
+            <el-option
+              v-for="supplier in suppliers"
+              :key="supplier.id"
+              :label="supplier.name"
+              :value="String(supplier.id)">
+            </el-option>
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -62,15 +69,22 @@
       <el-form :model="pricingForm" :rules="pricingRules" ref="pricingFormRef" label-width="100px">
         <el-form-item label="物料" prop="material_id">
           <el-select v-model="pricingForm.material_id" placeholder="请选择物料">
-            <el-option label="CPU" value="1"></el-option>
-            <el-option label="内存" value="2"></el-option>
-            <el-option label="硬盘" value="3"></el-option>
+            <el-option
+              v-for="material in materials"
+              :key="material.id"
+              :label="material.name"
+              :value="String(material.id)">
+            </el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="供应商" prop="supplier_id">
           <el-select v-model="pricingForm.supplier_id" placeholder="请选择供应商">
-            <el-option label="供应商A" value="1"></el-option>
-            <el-option label="供应商B" value="2"></el-option>
+            <el-option
+              v-for="supplier in suppliers"
+              :key="supplier.id"
+              :label="supplier.name"
+              :value="String(supplier.id)">
+            </el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="价格" prop="price">
@@ -97,12 +111,15 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { pricingService } from '../services/pricing'
+import { formatDate, toNumber, toString } from '../utils'
 
 export default {
   name: 'Pricing',
   setup() {
     const pricings = ref([])
     const loading = ref(false)
+    const materials = ref([])
+    const suppliers = ref([])
     
     const searchForm = reactive({
       material_id: '',
@@ -150,26 +167,28 @@ export default {
     }
     
     const pricingFormRef = ref(null)
+
+    // 获取基础数据（物料和供应商列表）
+    const getBaseData = async () => {
+      try {
+        const materialsRes = await pricingService.getMaterials()
+        const suppliersRes = await pricingService.getSuppliers()
+        materials.value = materialsRes.data.data || materialsRes.data || []
+        suppliers.value = suppliersRes.data.data || suppliersRes.data || []
+      } catch (error) {
+        ElMessage.error('获取基础数据失败：' + (error.response?.data?.message || '未知错误'))
+      }
+    }
     
     // 获取价格列表
     const getPricings = async () => {
       loading.value = true
       try {
         const response = await pricingService.getPricings(currentPage.value, pageSize.value)
-        // 模拟物料和供应商名称
-        const materialMap = {
-          1: 'CPU',
-          2: '内存',
-          3: '硬盘'
-        }
-        const supplierMap = {
-          1: '供应商A',
-          2: '供应商B'
-        }
         pricings.value = response.data.data.map(item => ({
           ...item,
-          material_name: materialMap[item.material_id] || '未知物料',
-          supplier_name: supplierMap[item.supplier_id] || '未知供应商'
+          material_name: materials.value.find(m => m.id === item.material_id)?.name || '未知物料',
+          supplier_name: suppliers.value.find(s => s.id === item.supplier_id)?.name || '未知供应商'
         }))
         total.value = response.data.total
       } catch (error) {
@@ -180,8 +199,13 @@ export default {
     }
     
     // 初始化数据
-    onMounted(() => {
-      getPricings()
+    onMounted(async () => {
+      // 检查是否有token
+      const token = localStorage.getItem('token')
+      if (token) {
+        await getBaseData()
+        await getPricings()
+      }
     })
     
     const handleAdd = () => {
@@ -211,12 +235,7 @@ export default {
         if (valid) {
           loading.value = true
           try {
-            // 格式化日期为YYYY-MM-DD格式
-            const formatDate = (date) => {
-              if (!date) return date
-              const d = new Date(date)
-              return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-            }
+            // 日期格式化已在工具函数中实现
             
             const formData = {
               ...pricingForm,
@@ -261,20 +280,10 @@ export default {
       loading.value = true
       try {
         const response = await pricingService.getPricings(currentPage.value, pageSize.value)
-        // 模拟物料和供应商名称
-        const materialMap = {
-          1: 'CPU',
-          2: '内存',
-          3: '硬盘'
-        }
-        const supplierMap = {
-          1: '供应商A',
-          2: '供应商B'
-        }
         let filteredPricings = response.data.data.map(item => ({
           ...item,
-          material_name: materialMap[item.material_id] || '未知物料',
-          supplier_name: supplierMap[item.supplier_id] || '未知供应商'
+          material_name: materials.value.find(m => m.id === item.material_id)?.name || '未知物料',
+          supplier_name: suppliers.value.find(s => s.id === item.supplier_id)?.name || '未知供应商'
         }))
         
         // 根据搜索条件过滤
@@ -320,6 +329,8 @@ export default {
     return {
       pricings,
       loading,
+      materials,
+      suppliers,
       searchForm,
       currentPage,
       pageSize,
@@ -329,6 +340,7 @@ export default {
       pricingForm,
       pricingRules,
       pricingFormRef,
+      getBaseData,
       getPricings,
       handleAdd,
       handleEdit,

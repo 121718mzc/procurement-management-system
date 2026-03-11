@@ -3,12 +3,14 @@ from flask import Blueprint, request, jsonify
 from models.purchase_order import PurchaseOrder
 from models.purchase_order_item import PurchaseOrderItem
 from db import db
+from utils.auth import require_permission
 
 # 创建蓝图
 bp = Blueprint('purchase', __name__, url_prefix='/purchase')
 
 # 采购订单列表
 @bp.route('/', methods=['GET'])
+@require_permission('purchase:view')
 def get_purchase_orders():
     try:
         # 获取分页参数
@@ -42,6 +44,9 @@ def get_purchase_orders():
         for order in orders.items:
             result.append(order.to_dict())
         
+        print(f"采购订单查询结果: {len(result)} 条记录")
+        print(f"总记录数: {orders.total}")
+        
         return jsonify({
             'data': result,
             'total': orders.total,
@@ -55,6 +60,7 @@ def get_purchase_orders():
 
 # 添加采购订单
 @bp.route('/', methods=['POST'])
+@require_permission('purchase:add')
 def add_purchase_order():
     data = request.json
     try:
@@ -91,6 +97,7 @@ def add_purchase_order():
 
 # 编辑采购订单
 @bp.route('/<int:id>', methods=['PUT'])
+@require_permission('purchase:edit')
 def update_purchase_order(id):
     data = request.json
     try:
@@ -130,6 +137,7 @@ def update_purchase_order(id):
 
 # 删除采购订单
 @bp.route('/<int:id>', methods=['DELETE'])
+@require_permission('purchase:delete')
 def delete_purchase_order(id):
     try:
         # 删除采购订单物品
@@ -148,6 +156,7 @@ def delete_purchase_order(id):
 
 # 采购订单详情
 @bp.route('/<int:id>', methods=['GET'])
+@require_permission('purchase:view')
 def get_purchase_order_detail(id):
     try:
         order = PurchaseOrder.query.get(id)

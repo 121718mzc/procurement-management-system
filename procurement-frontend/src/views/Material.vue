@@ -205,7 +205,11 @@ export default {
     
     // 初始化数据
     onMounted(() => {
-      getMaterials()
+      // 检查是否有token
+      const token = localStorage.getItem('token')
+      if (token) {
+        getMaterials()
+      }
     })
     
     const handleAdd = () => {

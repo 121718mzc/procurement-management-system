@@ -23,6 +23,7 @@
             <el-option label="已接收" value="received"></el-option>
             <el-option label="已完成" value="completed"></el-option>
             <el-option label="已取消" value="cancelled"></el-option>
+            <el-option label="待处理" value="pending"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -108,6 +109,7 @@
             <el-option label="已接收" value="received"></el-option>
             <el-option label="已完成" value="completed"></el-option>
             <el-option label="已取消" value="cancelled"></el-option>
+            <el-option label="待处理" value="pending"></el-option>
           </el-select>
         </el-form-item>
       </el-form>
@@ -125,6 +127,7 @@
 import { purchaseService } from '../services/purchase';
 import { supplierService } from '../services/supplier';
 import { contractService } from '../services/contract';
+import { formatDate, parseDate, toNumber, toString, debounce } from '../utils';
 
 export default {
   name: 'Purchase',
@@ -173,30 +176,23 @@ export default {
     }
   },
   mounted() {
-    this.getPurchaseOrders = this.debounce(this.getPurchaseOrders, 300);
-    this.handleSearch = this.debounce(this.handleSearch, 300);
-    this.getPurchaseOrders();
-    this.getSuppliers();
-    this.getContracts();
+    // 检查是否有token
+    const token = localStorage.getItem('token');
+    if (token) {
+      this.getPurchaseOrders();
+      this.getSuppliers();
+      this.getContracts();
+    }
   },
   methods: {
-    debounce(func, wait) {
-      let timeout;
-      return function executedFunction(...args) {
-        const later = () => {
-          clearTimeout(timeout);
-          func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-      };
-    },
+    // debounce函数已在工具函数中实现,
     getTagType(status) {
       switch (status) {
         case 'completed': return 'success'
         case 'sent': return 'warning'
         case 'received': return 'info'
         case 'cancelled': return 'danger'
+        case 'pending': return 'warning'
         default: return 'info'
       }
     },
@@ -207,6 +203,7 @@ export default {
         case 'received': return '已接收'
         case 'completed': return '已完成'
         case 'cancelled': return '已取消'
+        case 'pending': return '待处理'
         default: return status
       }
     },
@@ -235,6 +232,7 @@ export default {
       
       purchaseService.getPurchaseOrders(params)
         .then(response => {
+          console.log('采购订单API响应:', response);
           if (response && response.data) {
             if (response.data.error) {
               this.$message.error(response.data.error);
@@ -242,9 +240,11 @@ export default {
             }
             this.purchaseOrders = response.data.data;
             this.total = response.data.total;
+            console.log('采购订单数据:', this.purchaseOrders);
           } else {
             this.purchaseOrders = [];
             this.total = 0;
+            console.log('无采购订单数据');
           }
         })
         .catch(error => {
@@ -298,10 +298,10 @@ export default {
       this.purchaseForm = { ...row }
       // 转换日期格式
       if (row.order_date) {
-        this.purchaseForm.order_date = new Date(row.order_date);
+        this.purchaseForm.order_date = parseDate(row.order_date);
       }
       if (row.delivery_date) {
-        this.purchaseForm.delivery_date = new Date(row.delivery_date);
+        this.purchaseForm.delivery_date = parseDate(row.delivery_date);
       }
       this.dialogVisible = true
     },
@@ -312,10 +312,10 @@ export default {
           const formData = { ...this.purchaseForm };
           // 转换日期格式
           if (formData.order_date) {
-            formData.order_date = formData.order_date.toISOString().split('T')[0];
+            formData.order_date = formatDate(formData.order_date);
           }
           if (formData.delivery_date) {
-            formData.delivery_date = formData.delivery_date.toISOString().split('T')[0];
+            formData.delivery_date = formatDate(formData.delivery_date);
           }
           
           if (formData.id) {

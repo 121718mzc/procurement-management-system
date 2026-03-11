@@ -3,12 +3,14 @@ from flask import Blueprint, request, jsonify
 from models.material import Material
 from models.material_category import MaterialCategory
 from db import db
+from utils.auth import require_permission
 
 # 创建蓝图
 bp = Blueprint('material', __name__, url_prefix='/material')
 
 # 物料列表
 @bp.route('/', methods=['GET'])
+@require_permission('material:view')
 def get_materials():
     try:
         # 获取分页参数
@@ -36,6 +38,7 @@ def get_materials():
 
 # 添加物料
 @bp.route('/', methods=['POST'])
+@require_permission('material:add')
 def add_material():
     data = request.json
     try:
@@ -58,6 +61,7 @@ def add_material():
 
 # 编辑物料
 @bp.route('/<int:id>', methods=['PUT'])
+@require_permission('material:edit')
 def update_material(id):
     data = request.json
     try:
@@ -82,6 +86,7 @@ def update_material(id):
 
 # 删除物料
 @bp.route('/<int:id>', methods=['DELETE'])
+@require_permission('material:delete')
 def delete_material(id):
     try:
         material = Material.query.get(id)
@@ -97,12 +102,14 @@ def delete_material(id):
 
 # 物料分类
 @bp.route('/categories', methods=['GET'])
+@require_permission('material:view')
 def get_categories():
     categories = MaterialCategory.query.all()
     return jsonify([category.to_dict() for category in categories])
 
 # 添加物料分类
 @bp.route('/categories', methods=['POST'])
+@require_permission('material:add')
 def add_category():
     data = request.json
     try:
